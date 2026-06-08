@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pegazus Robot</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: #06080e;
+  color: #edf0f7;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Titlebar custom */
+.titlebar {
+  height: 32px;
+  background: #0c0f1a;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  -webkit-app-region: drag;
+  flex-shrink: 0;
+  gap: 10px;
+}
+.titlebar .logo { width: 18px; height: 18px; background: linear-gradient(135deg,#d4a843,#f0c96a); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #06080e; -webkit-app-region: no-drag; }
+.titlebar .title { font-size: 12px; font-weight: 600; color: #d4a843; }
+.titlebar .version { font-size: 10px; color: #5a677d; margin-left: 4px; }
+.titlebar .close-btn { margin-left: auto; -webkit-app-region: no-drag; padding: 3px 8px; background: rgba(240,84,79,.1); border: 1px solid rgba(240,84,79,.3); border-radius: 4px; color: #f0544f; font-size: 10px; cursor: pointer; }
+
+/* Layout */
+.app { flex: 1; display: grid; grid-template-columns: 220px 1fr; overflow: hidden; }
+
+/* Sidebar */
+.sidebar {
+  background: #0c0f1a;
+  border-right: 1px solid rgba(255,255,255,.07);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 0;
+  overflow-y: auto;
+}
+.sidebar-section { padding: 0 12px; margin-bottom: 20px; }
+.sidebar-label { font-size: 9px; font-weight: 700; color: #5a677d; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 8px; padding: 0 4px; }
+.nav-btn { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 8px; border: none; background: transparent; color: #8a96aa; font-size: 13px; cursor: pointer; width: 100%; text-align: left; margin-bottom: 2px; transition: all .15s; font-family: inherit; }
+.nav-btn:hover { background: rgba(255,255,255,.05); color: #edf0f7; }
+.nav-btn.active { background: rgba(212,168,67,.1); color: #d4a843; }
+.nav-btn .icon { width: 18px; text-align: center; }
+
+/* Status widget */
+.status-widget { margin: 0 12px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07); border-radius: 10px; padding: 12px; }
+.status-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 11px; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+.status-dot.green { background: #2dd4a0; box-shadow: 0 0 5px #2dd4a0; }
+.status-dot.red { background: #f0544f; }
+
+/* Main content */
+.main { display: flex; flex-direction: column; overflow: hidden; }
+
+/* Pages */
+.page { flex: 1; overflow-y: auto; padding: 20px; display: none; }
+.page.active { display: block; }
+
+.page-header { margin-bottom: 20px; }
+.page-title { font-family: 'Syne', system-ui, sans-serif; font-size: 20px; font-weight: 700; }
+.page-sub { font-size: 12px; color: #5a677d; margin-top: 4px; }
+
+/* Cards */
+.cards-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+.card { background: #0c0f1a; border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 16px 18px; }
+.card-label { font-size: 10px; color: #5a677d; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+.card-value { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500; }
+.card-sub { font-size: 10px; color: #5a677d; margin-top: 4px; }
+
+/* Robot panel */
+.robot-panel { background: #0c0f1a; border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+.robot-panel h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.robot-panel p { font-size: 12px; color: #5a677d; margin-bottom: 16px; line-height: 1.6; }
+
+.toggle-robot-btn {
+  width: 100%; padding: 13px; border-radius: 10px; border: none;
+  font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: all .2s;
+}
+.toggle-robot-btn.start { background: rgba(45,212,160,.12); border: 1px solid rgba(45,212,160,.4); color: #2dd4a0; }
+.toggle-robot-btn.stop { background: rgba(240,84,79,.12); border: 1px solid rgba(240,84,79,.4); color: #f0544f; }
+
+/* Settings */
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 5px; }
+.form-input { width: 100%; padding: 10px 13px; background: #111828; border: 1px solid rgba(255,255,255,.08); border-radius: 8px; color: #edf0f7; font-size: 13px; outline: none; font-family: 'DM Mono', monospace; }
+.form-input:focus { border-color: rgba(212,168,67,.4); }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* Log */
+.log-box { background: #080c14; border: 1px solid rgba(255,255,255,.06); border-radius: 8px; height: 200px; overflow-y: auto; padding: 10px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.7; }
+.log-line { padding: 1px 0; }
+.log-line.buy { color: #2dd4a0; }
+.log-line.sell { color: #f0544f; }
+.log-line.info { color: #d4a843; }
+.log-line.system { color: #5a677d; }
+
+/* Positions table */
+.table-wrap { background: #0c0f1a; border: 1px solid rgba(255,255,255,.07); border-radius: 12px; overflow: hidden; }
+.table-head { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.07); display: flex; justify-content: space-between; align-items: center; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead tr { border-bottom: 1px solid rgba(255,255,255,.07); }
+th { padding: 10px 14px; text-align: left; font-size: 10px; font-weight: 600; color: #5a677d; text-transform: uppercase; letter-spacing: .07em; }
+tbody tr { border-bottom: 1px solid rgba(255,255,255,.03); }
+td { padding: 10px 14px; }
+.badge { padding: 2px 8px; border-radius: 12px; font-size: 9px; font-weight: 700; }
+.badge.buy { background: rgba(45,212,160,.12); color: #2dd4a0; }
+.badge.sell { background: rgba(240,84,79,.12); color: #f0544f; }
+.badge.win { background: rgba(45,212,160,.12); color: #2dd4a0; }
+.badge.loss { background: rgba(240,84,79,.12); color: #f0544f; }
+.mono { font-family: 'DM Mono', monospace; }
+.pl-pos { color: #2dd4a0; font-weight: 700; }
+.pl-neg { color: #f0544f; font-weight: 700; }
+
+/* Login */
+.login-wrap { display: flex; align-items: center; justify-content: center; height: 100%; }
+.login-box { background: #0c0f1a; border: 1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 36px; width: 380px; }
+.login-logo { text-align: center; margin-bottom: 24px; }
+.login-logo .logo-icon { width: 56px; height: 56px; background: linear-gradient(135deg,#d4a843,#f0c96a); border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: #06080e; margin-bottom: 10px; }
+.login-logo h1 { font-size: 22px; font-weight: 700; color: #d4a843; }
+.login-logo p { font-size: 12px; color: #5a677d; margin-top: 4px; }
+.btn-primary { width: 100%; padding: 13px; background: #d4a843; border: none; border-radius: 9px; color: #06080e; font-weight: 700; font-size: 14px; cursor: pointer; font-family: inherit; margin-top: 6px; }
+.btn-primary:hover { background: #e5b955; }
+.error-msg { color: #f0544f; font-size: 12px; margin-top: 8px; display: none; }
+
+/* Charts mini */
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.chart-card { background: #0c0f1a; border: 1px solid rgba(255,255,255,.07); border-radius: 12px; overflow: hidden; }
+.chart-card canvas { width: 100%; display: block; }
+.chart-label { padding: 10px 14px; font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- TITLEBAR -->
+<div class="titlebar">
+  <div class="logo">P</div>
+  <span class="title">Pegazus Robot</span>
+  <span class="version" id="app-version">v1.0.0</span>
+  <button class="close-btn" onclick="window.electron?.quit()">✕ Quit</button>
+</div>
+
+<!-- LOGIN -->
+<div id="login-screen" class="login-wrap">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="logo-icon">P</div>
+      <h1>Pegazus Robot</h1>
+      <p>Sign in with your Pegazus account</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Pegazus URL</label>
+      <input class="form-input" id="login-url" value="https://pegazus-phi.vercel.app" placeholder="https://your-pegazus.vercel.app"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input class="form-input" id="login-email" type="email" placeholder="admin@pegazus.com"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" id="login-password" type="password" placeholder="••••••••"/>
+    </div>
+    <div class="error-msg" id="login-error">Invalid credentials</div>
+    <button class="btn-primary" id="login-btn" onclick="doLogin()">Sign In & Launch Robot</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app-screen" style="display:none">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Navigation</div>
+      <button class="nav-btn active" onclick="showPage('dashboard')" id="nav-dashboard">
+        <span class="icon">📊</span> Dashboard
+      </button>
+      <button class="nav-btn" onclick="showPage('robot')" id="nav-robot">
+        <span class="icon">🤖</span> Robot
+      </button>
+      <button class="nav-btn" onclick="showPage('positions')" id="nav-positions">
+        <span class="icon">📈</span> Positions
+      </button>
+      <button class="nav-btn" onclick="showPage('history')" id="nav-history">
+        <span class="icon">📋</span> History
+      </button>
+      <button class="nav-btn" onclick="showPage('settings')" id="nav-settings">
+        <span class="icon">⚙️</span> Settings
+      </button>
+    </div>
+
+    <div class="sidebar-section" style="margin-top:auto">
+      <div class="status-widget">
+        <div class="status-row">
+          <span><span class="status-dot" id="conn-dot"></span><span id="conn-label">Connecting...</span></span>
+        </div>
+        <div class="status-row" style="margin-bottom:0">
+          <span style="font-size:10px;color:#5a677d">Robot</span>
+          <span id="robot-badge" style="font-size:10px;font-weight:700;color:#5a677d">STOPPED</span>
+        </div>
+        <div style="margin-top:8px;font-size:10px;color:#5a677d" id="user-email-sidebar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub">Real-time overview of your Pegazus account</div>
+      </div>
+      <div class="cards-grid">
+        <div class="card">
+          <div class="card-label">Balance</div>
+          <div class="card-value" id="dash-balance" style="color:#edf0f7">$0.00</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Equity</div>
+          <div class="card-value" id="dash-equity" style="color:#2dd4a0">$0.00</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Open P&L</div>
+          <div class="card-value" id="dash-pl" style="color:#5a677d">$0.00</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Open Positions</div>
+          <div class="card-value" id="dash-positions" style="color:#d4a843">0</div>
+        </div>
+      </div>
+
+      <!-- Mini prices -->
+      <div class="table-wrap" style="margin-bottom:16px">
+        <div class="table-head">
+          <span style="font-size:13px;font-weight:700">Live Prices</span>
+          <span id="price-time" style="font-size:11px;color:#5a677d"></span>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Symbol</th><th>Bid</th><th>Ask</th><th>Change</th><th>Change %</th>
+          </tr></thead>
+          <tbody id="prices-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ROBOT -->
+    <div class="page" id="page-robot">
+      <div class="page-header">
+        <div class="page-title">Trading Robot</div>
+        <div class="page-sub">Automated EMA + RSI strategy running 24/7</div>
+      </div>
+
+      <div class="robot-panel">
+        <h3>🤖 Pegazus EMA Robot</h3>
+        <p>Automatically scans multiple instruments every 5 seconds. Opens BUY/SELL positions based on EMA crossover + RSI confirmation. Runs in background even when dashboard is closed.</p>
+        <button class="toggle-robot-btn start" id="robot-toggle-btn" onclick="toggleRobot()">
+          ▶ Start Robot
+        </button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div class="robot-panel" style="margin-bottom:0">
+          <h3>⚙️ Strategy Settings</h3>
+          <div class="form-grid" style="margin-top:12px">
+            <div class="form-group">
+              <label class="form-label">Fast EMA</label>
+              <input class="form-input" id="ema-fast" type="number" value="5" min="2" max="50"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Slow EMA</label>
+              <input class="form-input" id="ema-slow" type="number" value="13" min="5" max="200"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Stop Loss (pips)</label>
+              <input class="form-input" id="sl-pips" type="number" value="15" min="5"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Take Profit (pips)</label>
+              <input class="form-input" id="tp-pips" type="number" value="30" min="5"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Lot Size</label>
+              <input class="form-input" id="lot-size" type="number" value="0.01" step="0.01" min="0.01"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Max Positions</label>
+              <input class="form-input" id="max-pos" type="number" value="5" min="1" max="20"/>
+            </div>
+          </div>
+        </div>
+
+        <div class="robot-panel" style="margin-bottom:0">
+          <h3>📊 Robot Stats</h3>
+          <div style="margin-top:12px">
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px">
+              <span style="color:#5a677d">Status</span>
+              <span id="stat-status" style="font-weight:700;color:#5a677d">STOPPED</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px">
+              <span style="color:#5a677d">Signals scanned</span>
+              <span id="stat-signals" class="mono" style="color:#d4a843">0</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px">
+              <span style="color:#5a677d">Orders placed</span>
+              <span id="stat-orders" class="mono" style="color:#edf0f7">0</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px">
+              <span style="color:#5a677d">Wins</span>
+              <span id="stat-wins" class="mono" style="color:#2dd4a0">0</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:12px">
+              <span style="color:#5a677d">Losses</span>
+              <span id="stat-losses" class="mono" style="color:#f0544f">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-head">
+          <span style="font-size:13px;font-weight:700">Robot Log</span>
+          <button onclick="clearLog()" style="font-size:10px;color:#5a677d;background:none;border:none;cursor:pointer">Clear</button>
+        </div>
+        <div class="log-box" id="robot-log">
+          <div class="log-line system">[System] Robot ready. Configure settings and press Start.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- POSITIONS -->
+    <div class="page" id="page-positions">
+      <div class="page-header">
+        <div class="page-title">Open Positions</div>
+        <div class="page-sub" id="pos-summary">No open positions</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Symbol</th><th>Direction</th><th>Lot</th><th>Open Price</th><th>Current</th><th>SL</th><th>TP</th><th>P&L</th><th>Time</th>
+          </tr></thead>
+          <tbody id="positions-table">
+            <tr><td colspan="9" style="text-align:center;color:#5a677d;padding:24px">No open positions</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="page" id="page-history">
+      <div class="page-header">
+        <div class="page-title">Trade History</div>
+        <div class="page-sub" id="hist-summary">No closed trades</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Symbol</th><th>Direction</th><th>Lot</th><th>Entry</th><th>Exit</th><th>Result</th><th>P&L</th><th>Time</th>
+          </tr></thead>
+          <tbody id="history-table">
+            <tr><td colspan="8" style="text-align:center;color:#5a677d;padding:24px">No trades yet</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="page-settings">
+      <div class="page-header">
+        <div class="page-title">Settings</div>
+        <div class="page-sub">Account and connection settings</div>
+      </div>
+      <div style="max-width:500px">
+        <div class="robot-panel">
+          <h3>Account</h3>
+          <div style="margin-top:12px;font-size:12px">
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+              <span style="color:#5a677d">Email</span>
+              <span id="settings-email" style="color:#edf0f7">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+              <span style="color:#5a677d">Server</span>
+              <span id="settings-server" style="color:#edf0f7">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0">
+              <span style="color:#5a677d">Balance</span>
+              <span id="settings-balance" style="color:#2dd4a0;font-weight:700">—</span>
+            </div>
+          </div>
+          <button onclick="doLogout()" style="margin-top:14px;width:100%;padding:10px;background:rgba(240,84,79,.1);border:1px solid rgba(240,84,79,.3);border-radius:8px;color:#f0544f;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit">
+            Sign Out
+          </button>
+        </div>
+        <div class="robot-panel">
+          <h3>About</h3>
+          <div style="margin-top:10px;font-size:12px;color:#5a677d;line-height:1.7">
+            <div>Pegazus Robot <span id="about-version">v1.0.0</span></div>
+            <div>Automated trading robot for Pegazus platform</div>
+            <div style="margin-top:8px">Built with Electron + Node.js</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="renderer.js"></script>
+</body>
+</html>
