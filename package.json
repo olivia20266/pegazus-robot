@@ -1,0 +1,55 @@
+{
+  "name": "pegazus-robot",
+  "version": "1.0.0",
+  "description": "Pegazus Trading Robot — Desktop App",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder --win --mac --linux"
+  },
+  "build": {
+    "appId": "com.pegazus.robot",
+    "productName": "Pegazus Robot",
+    "copyright": "Copyright © 2025 Pegazus",
+    "icon": "assets/icon",
+    "files": ["src/**/*", "assets/**/*"],
+    "win": {
+      "target": [{"target": "nsis", "arch": ["x64"]}],
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": [{"target": "dmg", "arch": ["x64", "arm64"]}],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.finance"
+    },
+    "linux": {
+      "target": [{"target": "AppImage", "arch": ["x64"]}],
+      "icon": "assets/icon.png",
+      "category": "Finance"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Pegazus Robot"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "olivia20266",
+      "repo": "pegazus-robot"
+    }
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "dependencies": {
+    "electron-updater": "^6.1.0",
+    "node-fetch": "^2.7.0"
+  }
+}
